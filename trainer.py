@@ -1,4 +1,3 @@
-from metrics.batch_computeF1 import *
 from metrics.evaluate import *
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
@@ -13,13 +12,13 @@ def get_pred_entity(cate_pred, span_scores,label_set, is_flat_ner= True):
     top_span = []
     for i in range(len(cate_pred)):
         for j in range(i,len(cate_pred)):
-            if cate_pred[i][j]>0:
+            if cate_pred[i][j]>0:      # Nếu idx của nhãn lớn hơn 0 tức là chỉ xét nhưng nhãn thuộc "ANSWER"
                 tmp = (label_set[cate_pred[i][j].item()], i, j,span_scores[i][j].item())
                 top_span.append(tmp)
-    top_span = sorted(top_span, reverse=True, key=lambda x: x[3])
-    if not top_span:
+    top_span = sorted(top_span, reverse=True, key=lambda x: x[3])   # Sắp xếp theo score giảm dần
+    if not top_span:            # Nếu top_span bằng null thì nhãn là ['ANSWER', 0, 0, 0]
         return ['ANSWER', 0, 0, 0]
-    return top_span[0]
+    return top_span[0]          # Lấy nhãn đầu tiên cũng là nhãn có score cao nhất
 
 class Trainer(object):
     def __init__(self, args, train_dataset=None, dev_dataset=None, test_dataset=None):
@@ -146,7 +145,7 @@ class Trainer(object):
             loss = loss_func(tmp_out, tmp_label)
             eval_loss += loss.item()
 
-        exact_match, f1 = evaluate(outputs, self.args.max_char_len, self.args.max_seq_length, path)
+        exact_match, f1 = evaluate(outputs, path)
 
         print()
         print(exact_match)

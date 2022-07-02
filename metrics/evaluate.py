@@ -4,15 +4,15 @@ from metrics.exact_match_score import exact_match_score
 from dataloader import *
 import numpy as np
 
-def evaluate(outputs, max_char_len, max_seq_length, path):
+def evaluate(outputs, path):
 
 
     f1 = exact_match = 0 
-    list_sample = []
-    with open(path, 'r', encoding='utf8') as f:
+    list_sample = []        # Lưu trữ danh sách các mẫu
+    with open(path, 'r', encoding='utf8') as f:         # Đọc file dataset
         list_sample = json.load(f)
 
-    i = 0
+    i = 0               # Lưu trữ chỉ số của từng câu
     # Lặp qua từng mẫu
     for sample in list_sample:
         # Lấy context của từng sample
@@ -30,12 +30,12 @@ def evaluate(outputs, max_char_len, max_seq_length, path):
             # mỗi câu bị cắt tương ứng sẽ có 1 điểm số dự đoán của model
             # context[i] <-> outputs[i]
             sentence = ['cls'] + question + ['sep'] +  ctx
-            if score_max < outputs[i][3]:      
+            if score_max < outputs[i][3]:       # Nếu điểm số của output cao hơn điểm số max hiện tại thì cập nhật lại điểm số max và vị trí max mới
                 score_max = outputs[i][3]
                 start_pre = outputs[i][1]
                 end_pre = outputs[i][2]
                 label_prediction = " ".join(sentence[start_pre:end_pre+1])
-            i += 1
+            i += 1          # Sau mỗi lần lặp của 1 câu thì i tăng thêm 1 đơn vị
         # Lấy câu trả lời trong từng sample
         labels = sample['label']
         f1_idx = [0]
@@ -51,46 +51,6 @@ def evaluate(outputs, max_char_len, max_seq_length, path):
 
         f1 += max(f1_idx)
         exact_match += max(extract_match_idx)    
-
-
-
-    # output = np.zeros(20000) 
-    # inputs = InputSample(path=path, max_char_len=max_char_len, max_seq_length=max_seq_length).get_sample()
-
-    # j = -1
-    # label_prediction = ""
-    # idx = 0
-    # for i, sample in enumerate(inputs):
-    #     idx = sample['sample']
-    #     context = sample['context']
-    #     question = sample['question']
-    #     sentence = ['cls'] + question + ['sep'] +  context
-
-    #     if idx > j:
-    #         j = idx
-    #         output[idx] = prediction[i][3]
-    #         start_pre = prediction[i][1]
-    #         end_pre = prediction[i][2]
-    #         if idx > 0:
-    #             f1_idx = [0]
-    #             extract_match_idx = [0]
-    #             answers = inputs[i-1]['answer']
-    #             for ans in answers:
-    #                 # print(label_prediction)
-    #                 # print(ans)
-    #                 f1_idx.append(f1_score(label_prediction, ans))
-    #                 extract_match_idx.append(exact_match_score(label_prediction, ans))
-
-    #             f1 += max(f1_idx)
-    #             exact_match += max(extract_match_idx)
-
-    #         label_prediction = " ".join(sentence[start_pre:end_pre+1])
-    #     else:
-    #         if output[idx] < prediction[i][3]:
-    #             output[idx] = prediction[i][3]
-    #             start_pre = prediction[i][1]
-    #             end_pre = prediction[i][2]
-    #             label_prediction = " ".join(sentence[start_pre:end_pre+1])
 
     total = len(list_sample)
     exact_match = 100.0 * exact_match / total

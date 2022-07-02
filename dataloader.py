@@ -6,10 +6,10 @@ from torch.utils.data import Dataset
 
 class InputSample(object):
     def __init__(self, path, max_char_len=None, max_seq_length=None):
-        self.max_char_len = max_char_len
-        self.max_seq_length = max_seq_length
-        self.list_sample = []
-        with open(path, 'r', encoding='utf8') as f:
+        self.max_char_len = max_char_len        # Độ dài tối đa ký tự của một từ
+        self.max_seq_length = max_seq_length    # Độ dài tối đa của context
+        self.list_sample = []                   # Danh sách các mẫu
+        with open(path, 'r', encoding='utf8') as f:     # Đọc file dataset
             self.list_sample = json.load(f)
         # self.list_sample = self.list_sample[:10]
         
@@ -25,48 +25,50 @@ class InputSample(object):
 
     def get_sample(self):
         l_sample = []
-        for i, sample in enumerate(self.list_sample):
-            text_question = sample['question'].split(' ')
+        for i, sample in enumerate(self.list_sample):               # Lặp qua từng sample
+            text_question = sample['question'].split(' ')           # Tách question thành từng từ
             
-            context = sample['context']
-            text_context = ""
-            for item in context:
-              text_context += " ".join(item) + " "
-            text_context = text_context[:-1].split(' ')
+            context = sample['context']                             #
+            text_context = ""                                       #
+            for item in context:                                    # Tách context thành một list các từ
+              text_context += " ".join(item) + " "                  #
+            text_context = text_context[:-1].split(' ')             #
 
-            sent = text_question + text_context
-            char_seq = []
-            for word in sent:
-                character = self.get_character(word, self.max_char_len)
-                char_seq.append(character)
+            sent = text_question + text_context                             #
+            char_seq = []                                                   #
+            for word in sent:                                               # char_seq chứa danh sách cac ký tự cho từng từ
+                character = self.get_character(word, self.max_char_len)     #
+                char_seq.append(character)                                  #
 
             len_ctx = 0
-            for ctx in context:
-                qa_dict = {}
-                label_list = []
-                qa_dict['question'] = text_question
-                length_ctx = self.max_seq_length - len(text_question) - 2
-                if len(ctx) > length_ctx:
+            for ctx in context:         # Lặp qua từng câu trong context
+                qa_dict = {}            # Khởi tạo từ điển các mẫu
+
+                length_ctx = self.max_seq_length - len(text_question) - 2   # Độ dài tối đa của một câu
+                if len(ctx) > length_ctx:               # Nếu độ dài của một câu vượt quá độ dài tối đa thì cắt bớt cho = với độ đài cho phép
                   ctx = ctx[:length_ctx]
-                qa_dict['context'] = ctx
-                qa_dict['char_sequence'] = char_seq
                 
                 labels = sample['label']
-                for lb in labels:
+                label_list = []         # Khởi tạo danh sách các nhãn
+                for lb in labels:       # Lặp qua từng nhãn
                     entity = lb[0]
                     start = int(lb[1])
                     end = int(lb[2])
 
                     start_ctx = 0
                     end_ctx = 0
-                    if start >= len_ctx and end <= (len_ctx + len(ctx) - 1):
+                    if start >= len_ctx and end <= (len_ctx + len(ctx) - 1):        # Nếu nhãn thuộc trong câu được xét thì lưu lại trong label_list
                         start_ctx = start - len_ctx + len(text_question) + 2
                         end_ctx = end - len_ctx + len(text_question) + 2
-                        if end_ctx >= self.max_seq_length:
+                        if end_ctx >= self.max_seq_length:      # Nếu câu trả lời vượt quá độ dài câu thì cắt bỏ
                             end_ctx = self.max_seq_length - 1
 
                         label_list.append([entity, start_ctx, end_ctx])
-                qa_dict['label_idx'] = label_list
+                    # Nếu không có câu trả lời nào thuộc câu thì label_list = []
+                qa_dict['question'] = text_question     # Lưu trữ lại question 
+                qa_dict['context'] = ctx                # Lưu trữ lại câu
+                qa_dict['char_sequence'] = char_seq     # Lưu trữ lại ký tự
+                qa_dict['label_idx'] = label_list       # Lưu trữ lại label
                 len_ctx = len_ctx + len(ctx)
 
                 l_sample.append(qa_dict)
@@ -80,33 +82,36 @@ class MyDataSet(Dataset):
                  max_char_len, tokenizer, max_seq_length):
 
         self.samples = InputSample(path=path, max_char_len=max_char_len, max_seq_length=max_seq_length).get_sample()
-        self.tokenizer = tokenizer
-        self.max_seq_length = max_seq_length
-        self.max_char_len = max_char_len
-        with open(label_set_path, 'r', encoding='utf8') as f:
+        self.tokenizer = tokenizer                      # Chuyển văn bản thô thành số sử dụng tokenizer Phobert
+                                                        # Example: "Chúng_tôi là những nghiên_cứu_viên ." -> tensor([[    0,   746,     8,    21, 46349,     5,     2]])                
+        self.max_seq_length = max_seq_length            # Độ dài tối đa của context
+        self.max_char_len = max_char_len                # Độ dài tối đã của char
+        with open(label_set_path, 'r', encoding='utf8') as f:   # Đọc file từ điển nhãn
             self.label_set = f.read().splitlines()
 
-        with open(char_vocab_path, 'r', encoding='utf-8') as f:
+        with open(char_vocab_path, 'r', encoding='utf-8') as f: # Đọc file từ điển các ký tự
             self.char_vocab = json.load(f)
-        self.label_2int = {w: i for i, w in enumerate(self.label_set)}
+        self.label_2int = {w: i for i, w in enumerate(self.label_set)}  
 
     def preprocess(self, tokenizer, context, question, max_seq_length, mask_padding_with_zero=True):
-        firstSWindices = [0]
-        input_ids = [tokenizer.cls_token_id]
-        firstSWindices.append(len(input_ids))
+        input_ids = [tokenizer.cls_token_id]                    # Thêm [CLS] vào đầu câu
+        firstSWindices = [len(input_ids)]
 
         for w in question:
-            word_token = tokenizer.encode(w)
-            input_ids += word_token[1: (len(word_token) - 1)]
-            firstSWindices.append(len(input_ids))
+            word_token = tokenizer.encode(w)                    # Chuyển các token thành số
+            input_ids += word_token[1: (len(word_token) - 1)]   # Chỉ lấy token đầu tiên
+                                                                # Example: seq = "Chúng tôi"
+                                                                # tokenizer.encode("Chúng tôi") -> [0, 746, 2]
+                                                                # Lấy token đầu tiên tại vị trí [1: (len(word_token) - 1)]
+            firstSWindices.append(len(input_ids))               # lưu lại vị trí token đã lấy 
         
-        input_ids.append(tokenizer.sep_token_id)
+        input_ids.append(tokenizer.sep_token_id)                # Thêm [SEP] và giữa question và context
         firstSWindices.append(len(input_ids))
 
         for w in context:
             word_token = tokenizer.encode(w)
             input_ids += word_token[1: (len(word_token) - 1)]
-            if len(input_ids) >= max_seq_length:
+            if len(input_ids) >= max_seq_length:                
               firstSWindices.append(0)
             else:
               firstSWindices.append(len(input_ids))
@@ -114,7 +119,7 @@ class MyDataSet(Dataset):
         input_ids.append(tokenizer.sep_token_id)
         attention_mask = [1 if mask_padding_with_zero else 0] * len(input_ids)
 
-        if len(input_ids) > max_seq_length:
+        if len(input_ids) > max_seq_length:             
             input_ids = input_ids[:max_seq_length]
             firstSWindices = firstSWindices + [0] * (max_seq_length - len(firstSWindices))
             firstSWindices = firstSWindices[:max_seq_length]
@@ -135,25 +140,23 @@ class MyDataSet(Dataset):
 
     def character2id(self, character_sentence, max_seq_length):
         char_ids = []
-        for word in character_sentence:
+        for word in character_sentence:                 # Lặp qua từng câu trong sentence
             word_char_ids = []
-            for char in word:
-                if char not in self.char_vocab:
+            for char in word:                           # Lặp qua từng ký tự trong câu
+                if char not in self.char_vocab:         # Nếu ký tự không xuất hiện trong từ điển ký tự thì gán nó bằng 'UNK'
                     word_char_ids.append(self.char_vocab['UNK'])
-                else:
+                else:                                   # Nếu xuất hiện trong từ điển thì chuyển ký tự thành số 
                     word_char_ids.append(self.char_vocab[char])
             char_ids.append(word_char_ids)
-        if len(char_ids) < max_seq_length:
+        if len(char_ids) < max_seq_length:              # Nếu độ dài câu nhỏ hơn max_seq_length thì thêm padding vào cuối
             char_ids += [[self.char_vocab['PAD']] * self.max_char_len] * (max_seq_length - len(char_ids))
-        else:
-            char_ids = char_ids[:max_seq_length]
         return torch.tensor(char_ids)
 
-    def span_maxtrix_label(self, label):
+    def span_maxtrix_label(self, label):        
         start, end, entity = [], [], []
-        label = np.unique(label, axis=0).tolist()
-        for lb in label:
-            if int(lb[1]) > self.max_seq_length or int(lb[2]) > self.max_seq_length:
+        label = np.unique(label, axis=0).tolist()           # Loại bỏ những label trùng nhau
+        for lb in label:                                    # lặp qua từng label
+            if int(lb[1]) > self.max_seq_length or int(lb[2]) > self.max_seq_length:        # Nếu vị trí bd hoặc kết thúc lớn hơn max_seq_length thì chuyển thành vị trí (0, 0)
                 start.append(0)
                 end.append(0)
             else:
@@ -166,7 +169,13 @@ class MyDataSet(Dataset):
         
         label = torch.sparse.FloatTensor(torch.tensor([start, end], dtype=torch.int64), torch.tensor(entity),
                                          torch.Size([self.max_seq_length, self.max_seq_length])).to_dense()
-        
+        # Example: start = 2, end = 3, entity = 1, max_seq_length = 5
+        """ label = tensor([[0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 0, 1, 0],
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0]])
+            label.shape = [max_seq_length, max_seq_length]"""
         return label
 
     def __getitem__(self, index):
@@ -195,6 +204,13 @@ def get_mask(max_length, seq_length):
     mask = torch.tensor(mask)
     mask = mask.unsqueeze(1).expand(-1, mask.shape[-1], -1)
     mask = torch.triu(mask)
+
+    # Example: seq_length = [2], max_length = 5
+    """ mask = tensor([[[1, 1, 1, 1, 0],        # start_seq = 0 , end_seq = seq_length
+                        [0, 1, 1, 1, 0],        # start_seq = 1 , end_seq = seq_length
+                        [0, 0, 1, 1, 0],        # start_seq = 2 , end_seq = seq_length
+                        [0, 0, 0, 1, 0],        # start_seq = 3 , end_seq = seq_length
+                        [0, 0, 0, 0, 0]]])      # start_seq = 4 , end_seq = seq_length """ 
     return mask
 
 

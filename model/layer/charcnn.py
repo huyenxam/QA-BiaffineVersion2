@@ -9,8 +9,9 @@ class CharCNN(nn.Module):
         super(CharCNN, self).__init__()
         self.hidden_dim = hidden_dim
         self.embeddings = nn.Embedding(vocab_size, embedding_dim)
-
+        # Một model Embedding có chứa vocab_size tensor có kích thước embedding_dim
         self.embeddings.weight.data.copy_ = torch.from_numpy(self.random_embedding(vocab_size, hidden_dim))
+        # Sử dụng random_embedding làm ma trận trong số ban đầu cho model Embedding
 
         self.kernels = [3, 4]
         cnns = []
