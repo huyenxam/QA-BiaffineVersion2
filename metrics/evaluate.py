@@ -30,11 +30,12 @@ def evaluate(outputs, path):
             # mỗi câu bị cắt tương ứng sẽ có 1 điểm số dự đoán của model
             # context[i] <-> outputs[i]
             sentence = ['cls'] + question + ['sep'] +  ctx
-            if score_max < outputs[i][3]:       # Nếu điểm số của output cao hơn điểm số max hiện tại thì cập nhật lại điểm số max và vị trí max mới
-                score_max = outputs[i][3]
-                start_pre = outputs[i][1]
-                end_pre = outputs[i][2]
-                label_prediction = " ".join(sentence[start_pre:end_pre+1])
+            start_pre = outputs[i][1]
+            end_pre = outputs[i][2]
+            if start_pre != 0 and end_pre != 0:     # Nếu câu trả lời không phải vị trí của câu negative (0, 0)
+                if score_max < outputs[i][3]:       # Nếu điểm số của output cao hơn điểm số max hiện tại thì cập nhật lại điểm số max và vị trí max mới
+                    score_max = outputs[i][3]
+                    label_prediction = " ".join(sentence[start_pre:end_pre+1])
             i += 1          # Sau mỗi lần lặp của 1 câu thì i tăng thêm 1 đơn vị
         # Lấy câu trả lời trong từng sample
         labels = sample['label']
