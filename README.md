@@ -1,4 +1,3 @@
-Pytorch implementation of Analyzing Vietnamese Legal Question using Deep Neural Network with Biaffine  classifiers
 Tách context thành từng câu
 ## Model Architecture
 
