@@ -41,9 +41,7 @@ def evaluate(outputs, path):
         f1_idx = [0]
         extract_match_idx = [0]
         for lb in labels:
-            start = int(lb[1])
-            end = int(lb[2])
-            ground_truth = " ".join(text_context[start:end+1])
+            ground_truth = lb[3]
             f1_idx.append(f1_score(label_prediction, ground_truth))
             extract_match_idx.append(exact_match_score(label_prediction, ground_truth))
             # print(ground_truth)
