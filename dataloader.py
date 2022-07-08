@@ -63,8 +63,8 @@ class InputSample(object):
                         if end_ctx >= self.max_seq_length:      # Nếu câu trả lời vượt quá độ dài câu thì cắt bỏ
                             end_ctx = self.max_seq_length - 1
 
-                    label_list.append([entity, start_ctx, end_ctx])
-                    # Nếu không có câu trả lời nào thuộc câu thì label_list = ["ANSWER", 0 , 0]
+                        label_list.append([entity, start_ctx, end_ctx])
+                        # Nếu không có câu trả lời nào thuộc câu thì label_list = []
                 qa_dict['question'] = text_question     # Lưu trữ lại question 
                 qa_dict['context'] = ctx                # Lưu trữ lại câu
                 qa_dict['char_sequence'] = char_seq     # Lưu trữ lại ký tự
