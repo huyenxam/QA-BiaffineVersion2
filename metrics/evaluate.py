@@ -17,10 +17,6 @@ def evaluate(outputs, path):
         # Lấy context của từng sample
         context = sample['context']
         question = sample['question'].split(" ")
-        text_context = ""
-        for item in context:
-            text_context += " ".join(item) + " "
-        text_context = text_context[:-1].split(' ')
 
         label_prediction = ""
         score_max = 0
