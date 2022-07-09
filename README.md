@@ -1,4 +1,4 @@
-Tách context thành từng câu
+Tách context thành từng câu sử dụng  phobert
 ## Model Architecture
 
 <p float="left" align="center">
@@ -37,5 +37,4 @@ bash train.sh
 
 - [Huggingface Transformers](https://github.com/huggingface/transformers)
 
-# QA-Biaffine
 # QA-BiaffineVersion2
